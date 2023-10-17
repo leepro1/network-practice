@@ -4,8 +4,25 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.Random;
 
-public class Example1e {
-	static Queue<Integer> queue = new ArrayDeque<Integer>();
+public class Example1f {
+	static class SumTask {
+		int from, to;
+
+		public SumTask(int from, int to) {
+			this.from = from;
+			this.to = to;
+		}
+
+		public void run() {
+			int sum = 0;
+			for (int i = from; i <= to; ++i)
+				sum += i;
+			System.out.printf("from %d to %d: %d\n", from, to, sum);
+		}
+	}
+
+	static Queue<SumTask> queue = new ArrayDeque<SumTask>();
+	static SumTask END = new SumTask(-1, -1);
 
 	static class Producer extends Thread {
 		final int count = 100;
@@ -16,14 +33,15 @@ public class Example1e {
 			try {
 				for (int i = 0; i < count; ++i) {
 					Thread.sleep(10);
-					int n = random.nextInt(100);
+					int from = random.nextInt(50);
+					int to = from + random.nextInt(50);
 					synchronized (queue) {
-						queue.add(n);
+						queue.add(new SumTask(from, to));
 						queue.notify();
 					}
 				}
 				synchronized (queue) {
-					queue.add(-1);
+					queue.add(END);
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -37,19 +55,16 @@ public class Example1e {
 		@Override
 		public void run() {
 			try {
-				int n;
+				SumTask sumTask;
 				while (true) {
 					synchronized (queue) {
 						while (queue.size() == 0)
 							queue.wait();
-						n = queue.remove();
+						sumTask = queue.remove();
 					}
-					if (n < 0)
+					if (sumTask == END)
 						break;
-					int sum = 0;
-					for (int i = 1; i <= n; ++i)
-						sum += i;
-					System.out.printf("%d: %d\n", n, sum);
+					sumTask.run();
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -58,9 +73,9 @@ public class Example1e {
 	}
 
 	public static void main(String[] args) {
-		for (int i = 0; i < 5; ++i)
-			new Consumer().start();
 		for (int i = 0; i < 3; ++i)
 			new Producer().start();
+		for (int i = 0; i < 5; ++i)
+			new Consumer().start();
 	}
 }
